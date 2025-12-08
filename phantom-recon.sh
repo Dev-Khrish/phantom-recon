@@ -116,9 +116,9 @@ check_dependencies() {
         fi
     done
     
-    # Check for either httpx or httprobe
-    if ! command -v "httpx" &> /dev/null && ! command -v "httprobe" &> /dev/null; then
-        missing+=("httpx or httprobe")
+    # Check for either httpx-toolkit or httprobe
+    if ! command -v "httpx-toolkit" &> /dev/null && ! command -v "httprobe" &> /dev/null; then
+        missing+=("httpx-toolkit or httprobe")
     fi
     
     if [ ${#missing[@]} -gt 0 ]; then
@@ -186,22 +186,22 @@ subdomain_enum() {
 live_host_discovery() {
     section_header "LIVE HOST DISCOVERY"
     
-    # Check if httpx is available and supports long-form flags
-    if command -v "httpx" &> /dev/null; then
-        print_status "Probing for live hosts with httpx..."
+    # Check if httpx-toolkit is available and supports long-form flags
+    if command -v "httpx-toolkit" &> /dev/null; then
+        print_status "Probing for live hosts with httpx-toolkit..."
         # Try with long-form flags first
-        if cat all_subs.txt | httpx --silent --status-code --title --tech-detect -o alive_subs.txt 2>/dev/null; then
-            print_success "httpx with long-form flags worked"
+        if cat all_subs.txt | httpx-toolkit --silent --status-code --title --tech-detect -o alive_subs.txt 2>/dev/null; then
+            print_success "httpx-toolkit with long-form flags worked"
         else
-            # Fallback to basic httpx
-            print_warning "httpx long-form flags failed, trying basic mode"
-            cat all_subs.txt | httpx -o alive_subs.txt
+            # Fallback to basic httpx-toolkit
+            print_warning "httpx-toolkit long-form flags failed, trying basic mode"
+            cat all_subs.txt | httpx-toolkit -o alive_subs.txt
         fi
     elif command -v "httprobe" &> /dev/null; then
         print_status "Probing for live hosts with httprobe..."
         cat all_subs.txt | httprobe -c 50 > alive_subs.txt
     else
-        print_error "Neither httpx nor httprobe is available"
+        print_error "Neither httpx-toolkit nor httprobe is available"
         exit 1
     fi
     
