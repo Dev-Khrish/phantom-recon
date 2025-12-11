@@ -275,12 +275,75 @@ parameter_discovery() {
     section_header "PARAMETER DISCOVERY"
     
     print_status "Preparing URLs for parameter discovery..."
-    cat all_urls.txt | grep "=" | cut -d "=" -f1 | sort -u > urls_for_arjun.txt
-    
+
+    # --- START: SANITIZE + FILTER URLs FOR ARJUN ---
+    # Step 1: extract candidate parameterized URLs
+    if [ -f all_urls.txt ]; then
+        grep "=" all_urls.txt | sort -u > urls_temp.txt || true
+    else
+        touch urls_temp.txt
+    fi
+
+    VALID="urls_for_arjun.txt"
+    INVALID="bad_urls.txt"
+    > "$VALID"
+    > "$INVALID"
+
+    # Loop and filter
+    while IFS= read -r url || [ -n "$url" ]; do
+        # Skip empty lines
+        if [ -z "$url" ]; then
+            continue
+        fi
+
+        # Must start with http/https
+        if [[ ! "$url" =~ ^https?:// ]]; then
+            echo "$url" >> "$INVALID"
+            continue
+        fi
+
+        # Reject fused URLs that contain another protocol inside
+        # Count occurrences of 'http' or 'https'
+        proto_count=$(grep -o -i "http" <<< "$url" | wc -l || true)
+        if [ "$proto_count" -gt 1 ]; then
+            echo "$url" >> "$INVALID"
+            continue
+        fi
+
+        # Reject URLs with problematic characters
+        if [[ "$url" =~ [\(\)\<\>\'\"\ \{\\] ]]; then
+            echo "$url" >> "$INVALID"
+            continue
+        fi
+
+        # Optional: lightweight reachability check (uncomment if you want slower but safer runs)
+        # if ! curl -s --head --max-time 5 "$url" >/dev/null 2>&1; then
+        #     echo "$url" >> "$INVALID"
+        #     continue
+        # fi
+
+        echo "$url" >> "$VALID"
+    done < urls_temp.txt
+
+    # Clean up temp
+    rm -f urls_temp.txt
+
+    print_success "Prepared $(wc -l < "$VALID" 2>/dev/null || echo 0) valid URLs for Arjun"
+    if [ -s "$INVALID" ]; then
+        print_warning "Malformed or suspicious URLs moved to $INVALID"
+    fi
+    # --- END: SANITIZE + FILTER URLs FOR ARJUN ---
+
     print_status "Running Arjun for parameter discovery..."
-    arjun -i urls_for_arjun.txt -t 50 -oT arjun_params.txt
-    
-    PARAM_COUNT=$(wc -l < arjun_params.txt)
+    # If urls_for_arjun.txt is empty, arjun will do nothing; keep behaviour simple
+    if [ -s "$VALID" ]; then
+        arjun -i "$VALID" -t 50 -oT arjun_params.txt 2> arjun_run.log || true
+    else
+        touch arjun_params.txt
+        print_warning "No valid URLs to scan with Arjun."
+    fi
+
+    PARAM_COUNT=$(wc -l < arjun_params.txt 2>/dev/null || echo 0)
     print_success "Discovered $PARAM_COUNT parameters"
     
     # Show top 5 parameters
