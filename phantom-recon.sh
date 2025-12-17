@@ -166,7 +166,7 @@ subdomain_enum() {
     section_header "SUBDOMAIN ENUMERATION"
     
     print_status "Running subfinder..."
-    subfinder -d "$TARGET" -silent -o subfinder.txt
+    subfinder -d "$TARGET" -all -o subfinder.txt
     
     print_status "Running assetfinder..."
     assetfinder --subs-only "$TARGET" > assetfinder.txt
